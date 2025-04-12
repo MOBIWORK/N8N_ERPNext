@@ -1,0 +1,18 @@
+{
+	"node": "n8n-nodes-base.ERPNext",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["ERP", "Frappe"],
+	"resources": {
+		"credentialDocumentation": [
+			{
+				"url": ""
+			}
+		],
+		"primaryDocumentation": [
+			{
+				"url": ""
+			}
+		]
+	}
+}
