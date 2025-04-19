@@ -14,7 +14,7 @@ export class FrappeCustom implements INodeType {
     version: 1,
     description: 'Tích hợp với Frappe/ERPNext API',
     defaults: {
-      name: 'Frappe Custom',
+      name: 'MBWD ERPNext',
     },
     inputs: [NodeConnectionType.Main],
     outputs: [NodeConnectionType.Main],
@@ -26,19 +26,11 @@ export class FrappeCustom implements INodeType {
     ],
     properties: [
       {
-        displayName: 'Resource',
-        name: 'resource',
-        type: 'options',
-        noDataExpression: true,
-        options: [
-          {
-            name: 'Brand',
-            value: 'Brand',
-            description: 'Lấy danh sách các Brand',
-          },
-        ],
-        default: 'Brand',
-        description: 'DocType để thao tác',
+        displayName: 'DocType',
+        name: 'doctype',
+        type: 'string',
+        default: '',
+        description: 'Nhập tên DocType để thao tác (VD: Item, Customer...)',
       },
       {
         displayName: 'Operation',
@@ -47,22 +39,76 @@ export class FrappeCustom implements INodeType {
         noDataExpression: true,
         options: [
           {
-            name: 'Get',
+            name: 'Get List Documents',
             value: 'get',
-            description: 'Lấy danh sách các Brand',
-            action: 'Lấy danh sách các Brand',
+            description: 'Lấy danh sách bản ghi',
           },
         ],
         default: 'get',
         description: 'Hành động thực hiện',
       },
-
       {
         displayName: 'Fields',
         name: 'fields',
         type: 'string',
-        default: 'brand_name, is_sync',
-        description: 'Các trường cần lấy từ Brand',
+        default: 'name',
+        description: 'Các trường cần lấy, phân tách bằng dấu phẩy (VD: name,is_active)',
+      },
+      {
+        displayName: 'Limit',
+        name: 'limit',
+        type: 'number',
+        default: 20,
+        description: 'Giới hạn số lượng bản ghi trả về',
+      },
+      {
+        displayName: 'Filters',
+        name: 'filters',
+        type: 'fixedCollection',
+        typeOptions: {
+          multipleValues: true,
+        },
+        placeholder: 'Thêm filter',
+        default: {},
+        options: [
+          {
+            name: 'filter',
+            displayName: 'Filter',
+            values: [
+              {
+                displayName: 'Field',
+                name: 'field',
+                type: 'string',
+                default: '',
+                required: true,
+              },
+              {
+                displayName: 'Operator',
+                name: 'operator',
+                type: 'options',
+                options: [
+                  { name: 'IS (=)', value: 'eq' },
+                  { name: 'Greater Than (>)', value: 'gt' },
+                  { name: 'Less Than (<)', value: 'lt' },
+                  { name: 'Greater or Equal (>=)', value: 'gte' },
+                  { name: 'Less or Equal (<=)', value: 'lte' },
+                  { name: 'Not Equal (!=)', value: 'neq' },
+                  { name: 'Like', value: 'like' },
+                  { name: 'In', value: 'in' },
+                  { name: 'Not In', value: 'notin' },
+                ],
+                default: 'eq',
+              },
+              {
+                displayName: 'Value',
+                name: 'value',
+                type: 'string',
+                default: '',
+                required: true,
+              },
+            ],
+          },
+        ],
       },
     ],
   };
@@ -70,47 +116,78 @@ export class FrappeCustom implements INodeType {
   async execute(this: any): Promise<INodeExecutionData[][]> {
     const items = this.getInputData();
     const returnData: INodeExecutionData[] = [];
-    const resource = this.getNodeParameter('resource', 0) as string;
-    const operation = this.getNodeParameter('operation', 0) as string;
 
-    // Lấy credentials
+    // Lấy các tham số từ node
+    const doctype = this.getNodeParameter('doctype', 0) as string;
+    const fields = this.getNodeParameter('fields', 0) as string;
+    const limit = this.getNodeParameter('limit', 0) as number;
+
+    const filtersRaw = this.getNodeParameter('filters.filter', 0, []) as {
+      field: string;
+      operator: string;
+      value: string;
+    }[];
+
+    const operatorMap: { [key: string]: string } = {
+      eq: '=',
+      gt: '>',
+      lt: '<',
+      gte: '>=',
+      lte: '<=',
+      neq: '!=',
+      like: 'like',
+      in: 'in',
+      notin: 'not in',
+    };
+
+    // Lấy thông tin credentials
     const credentials = await this.getCredentials('FrappeCustomApi');
-    
     const baseUrl = credentials?.baseUrl;
     const apiKey = credentials?.apiKey;
     const apiSecret = credentials?.apiSecret;
 
     if (!baseUrl || !apiKey || !apiSecret) {
-      throw new Error('Base URL, API Key, hoặc API Secret không hợp lệ.');
+      throw new Error('Thiếu thông tin baseUrl, apiKey hoặc apiSecret.');
     }
 
     const authHeader = `Basic ${Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')}`;
 
     for (let i = 0; i < items.length; i++) {
       try {
-        let responseData;
+        const qs: any = {
+          fields: JSON.stringify(fields.split(',').map(f => f.trim())),
+          limit, // Thêm tham số limit vào query string
+        };
 
-        if (resource === 'Brand' && operation === 'get') {
-          // Gọi API với Basic Authentication
-          responseData = await this.helpers.httpRequest({
-            url: `${baseUrl}/api/resource/Warehouse`,
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': authHeader,
-            },
-          });
+        // Xây dựng filters nếu có
+        if (filtersRaw.length > 0) {
+          const frappeFilters = filtersRaw.map(filter => [
+            filter.field,
+            operatorMap[filter.operator],
+            filter.value,
+          ]);
+          qs.filters = JSON.stringify(frappeFilters);
         }
 
-        returnData.push({
-          json: responseData?.data || responseData,
+        // Gửi request API
+        const response = await this.helpers.httpRequest({
+          method: 'GET',
+          url: `${baseUrl}/api/resource/${doctype}`,
+          headers: {
+            'Authorization': authHeader,
+            'Content-Type': 'application/json',
+          },
+          qs,
         });
+
+        const data = response.data || response;
+        returnData.push({ json: data });
       } catch (error: any) {
         if (this.continueOnFail()) {
           returnData.push({ json: { error: error.message } });
           continue;
         }
-        throw new Error(`Lỗi: ${error.message}`);
+        throw error;
       }
     }
 
