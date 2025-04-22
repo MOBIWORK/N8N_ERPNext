@@ -30,7 +30,12 @@ export class FrappeCustom implements INodeType {
         name: 'doctype',
         type: 'string',
         default: '',
-        description: 'Nhập tên DocType để thao tác (VD: Item, Customer...)',
+        description: 'Nhập tên DocType để thao tác (VD: Sales Order, Customer,...)',
+        displayOptions: {
+          show: {
+            operation: ['get', 'create', 'update'],
+          },
+        },
       },
       {
         displayName: 'Operation',
@@ -43,23 +48,60 @@ export class FrappeCustom implements INodeType {
             value: 'get',
             description: 'Lấy danh sách bản ghi',
           },
+          {
+            name: 'Create Document',
+            value: 'create',
+            description: 'Tạo bản ghi mới',
+          },
+          {
+            name: 'Update Document',
+            value: 'update',
+            description: 'Cập nhật bản ghi',
+          },
+          {
+            name: 'Get Projected Quantity',
+            value: 'getProjectedQty',
+            description: 'Lấy số lượng dự báo của sản phẩm',
+          },
         ],
         default: 'get',
-        description: 'Hành động thực hiện',
+        description: 'Chọn hành động thực hiện',
+      },
+      {
+        displayName: 'Item Code',
+        name: 'item_code',
+        type: 'string',
+        default: '',
+        description: 'Mã sản phẩm cần lấy projected_qty',
+        displayOptions: {
+          show: {
+            operation: ['getProjectedQty'],
+          },
+        },
+      },
+      {
+        displayName: 'Last Updated',
+        name: 'last_updated',
+        type: 'string',
+        default: '',
+        description: 'Lọc theo ngày cập nhật (YYYY-MM-DD HH:MM:SS)',
+        displayOptions: {
+          show: {
+            operation: ['getProjectedQty'],
+          },
+        },
       },
       {
         displayName: 'Fields',
         name: 'fields',
         type: 'string',
         default: 'name',
-        description: 'Các trường cần lấy, phân tách bằng dấu phẩy (VD: name,is_active)',
-      },
-      {
-        displayName: 'Limit',
-        name: 'limit',
-        type: 'number',
-        default: 20,
-        description: 'Giới hạn số lượng bản ghi trả về',
+        description: 'Các trường cần lấy khi thao tác GET (VD: name, customer, total_amount)',
+        displayOptions: {
+          show: {
+            operation: ['get'],
+          },
+        },
       },
       {
         displayName: 'Filters',
@@ -109,6 +151,23 @@ export class FrappeCustom implements INodeType {
             ],
           },
         ],
+        displayOptions: {
+          show: {
+            operation: ['get'],
+          },
+        },
+      },
+      {
+        displayName: 'Data (JSON)',
+        name: 'parameters',
+        type: 'json',
+        default: '{}',
+        description: 'Dữ liệu JSON gửi lên khi tạo hoặc cập nhật bản ghi',
+        displayOptions: {
+          show: {
+            operation: ['create', 'update'],
+          },
+        },
       },
     ],
   };
@@ -117,11 +176,12 @@ export class FrappeCustom implements INodeType {
     const items = this.getInputData();
     const returnData: INodeExecutionData[] = [];
 
-    // Lấy các tham số từ node
-    const doctype = this.getNodeParameter('doctype', 0) as string;
-    const fields = this.getNodeParameter('fields', 0) as string;
-    const limit = this.getNodeParameter('limit', 0) as number;
-
+    const operation = this.getNodeParameter('operation', 0) as string;
+    let doctype = '';
+    if (operation !== 'getProjectedQty') {
+      doctype = this.getNodeParameter('doctype', 0) as string;
+    }
+    const fields = this.getNodeParameter('fields', 0, '') as string;
     const filtersRaw = this.getNodeParameter('filters.filter', 0, []) as {
       field: string;
       operator: string;
@@ -129,18 +189,10 @@ export class FrappeCustom implements INodeType {
     }[];
 
     const operatorMap: { [key: string]: string } = {
-      eq: '=',
-      gt: '>',
-      lt: '<',
-      gte: '>=',
-      lte: '<=',
-      neq: '!=',
-      like: 'like',
-      in: 'in',
-      notin: 'not in',
+      eq: '=', gt: '>', lt: '<', gte: '>=', lte: '<=',
+      neq: '!=', like: 'like', in: 'in', notin: 'not in',
     };
 
-    // Lấy thông tin credentials
     const credentials = await this.getCredentials('FrappeCustomApi');
     const baseUrl = credentials?.baseUrl;
     const apiKey = credentials?.apiKey;
@@ -154,34 +206,130 @@ export class FrappeCustom implements INodeType {
 
     for (let i = 0; i < items.length; i++) {
       try {
-        const qs: any = {
-          fields: JSON.stringify(fields.split(',').map(f => f.trim())),
-          limit, // Thêm tham số limit vào query string
-        };
+        let response;
 
-        // Xây dựng filters nếu có
-        if (filtersRaw.length > 0) {
-          const frappeFilters = filtersRaw.map(filter => [
-            filter.field,
-            operatorMap[filter.operator],
-            filter.value,
-          ]);
-          qs.filters = JSON.stringify(frappeFilters);
+        if (operation === 'create' && doctype === 'Sales Order') {
+          const parameters = items[i].json;
+
+          response = await this.helpers.httpRequest({
+            method: 'POST',
+            url: `${baseUrl}/api/method/mbw_integration_dms.mbw_integration_dms.api_n8n.sales_order.create_sale_order_n8n`,
+            headers: {
+              Authorization: authHeader,
+              'Content-Type': 'application/json',
+            },
+            body: parameters,
+            json: true,
+          });
         }
 
-        // Gửi request API
-        const response = await this.helpers.httpRequest({
-          method: 'GET',
-          url: `${baseUrl}/api/resource/${doctype}`,
-          headers: {
-            'Authorization': authHeader,
-            'Content-Type': 'application/json',
-          },
-          qs,
-        });
+        else if (operation === 'create' && doctype === 'Customer') {
+          const parameters = items[i].json;
 
-        const data = response.data || response;
-        returnData.push({ json: data });
+          response = await this.helpers.httpRequest({
+            method: 'POST',
+            url: `${baseUrl}/api/method/mbw_integration_dms.mbw_integration_dms.api_n8n.customer.create_customers_n8n`,
+            headers: {
+              Authorization: authHeader,
+              'Content-Type': 'application/json',
+            },
+            body: parameters,
+            json: true,
+          });
+        }
+
+        else if (operation === 'create' && doctype === 'DMS KPI') {
+          const parameters = items[i].json;
+
+          response = await this.helpers.httpRequest({
+            method: 'POST',
+            url: `${baseUrl}/api/method/mbw_integration_dms.mbw_integration_dms.api_n8n.kpi.get_kpi_dms`,
+            headers: {
+              Authorization: authHeader,
+              'Content-Type': 'application/json',
+            },
+            body: parameters,
+            json: true,
+          });
+        }
+
+        else if (operation === 'create' && doctype === 'DMS Timesheets') {
+          const parameters = items[i].json;
+
+          response = await this.helpers.httpRequest({
+            method: 'POST',
+            url: `${baseUrl}/api/method/mbw_integration_dms.mbw_integration_dms.api_n8n.timesheet.get_timesheet_dms`,
+            headers: {
+              Authorization: authHeader,
+              'Content-Type': 'application/json',
+            },
+            body: parameters,
+            json: true,
+          });
+        }
+
+        else if (operation === 'update' && doctype === 'Customer') {
+          const parameters = this.getNodeParameter('parameters', i, {}) as object;
+
+          response = await this.helpers.httpRequest({
+            method: 'PUT',
+            url: `${baseUrl}/api/method/mbw_integration_dms.mbw_integration_dms.api_n8n.customer.update_customer_n8n`,
+            headers: {
+              Authorization: authHeader,
+              'Content-Type': 'application/json',
+            },
+            body: parameters,
+            json: true,
+          });
+        }
+
+        else if (operation === 'get') {
+          const fieldsArray = fields.split(',').map(f => f.trim());
+          const filters = filtersRaw.map(filter => [
+            filter.field,
+            operatorMap[filter.operator] || '=',
+            filter.value,
+          ]);
+
+          response = await this.helpers.httpRequest({
+            method: 'GET',
+            url: `${baseUrl}/api/resource/${doctype}`,
+            headers: {
+              Authorization: authHeader,
+              'Content-Type': 'application/json',
+            },
+            qs: {
+              fields: JSON.stringify(fieldsArray),
+              filters: JSON.stringify(filters),
+            },
+          });
+
+          response = response.data || response;
+        }
+
+        else if (operation === 'getProjectedQty') {
+          const itemCode = this.getNodeParameter('item_code', i, '') as string;
+          const lastUpdated = this.getNodeParameter('last_updated', i, '') as string;
+
+          const queryParams: Record<string, string> = {};
+          if (itemCode) queryParams.item_code = itemCode;
+          if (lastUpdated) queryParams.last_updated = lastUpdated;
+
+          response = await this.helpers.httpRequest({
+            method: 'GET',
+            url: `${baseUrl}/api/method/mbw_integration_dms.api.get_projected_qty_item.get_projected_qty`,
+            headers: {
+              Authorization: authHeader,
+              'Content-Type': 'application/json',
+            },
+            qs: queryParams,
+            json: true,
+          });
+
+          response = response.message || response;
+        }
+
+        returnData.push({ json: response });
       } catch (error: any) {
         if (this.continueOnFail()) {
           returnData.push({ json: { error: error.message } });

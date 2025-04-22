@@ -15,7 +15,7 @@ export class FrappeCustomApi implements ICredentialType {
       displayName: 'Base URL',
       name: 'baseUrl',
       type: 'string',
-      default: 'https://erp-dms.mbwnext.com',
+      default: 'http://hr.mbwcloud.com:8003',
       description: 'URL của Frappe instance',
     },
     {
