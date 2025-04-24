@@ -35,3 +35,17 @@ check: pnpm -v
 
 7. Sau khi cập nhật code mới:
 - cd N8N_ERPNext -> pnpm run build để update -> n8n start
+
+
+*** Cách tạo các custom nodes N8N
+Có 2 folder chính là credentials và nodes
+1. Folder credentials chưa các file có đuôi .crdentials.ts (vd MBWCustomApi.crdentials.ts) có tác dụng:
+- Khai báo thông tin cần nhập để kết nối API
+- Tạo form UI cho người dùng nhập trong phần "Credentials" của n8n
+- Xác định kiểu xác thực (Bearer token, Basic Auth, OAuth2,...)
+
+2. Folder nodes chứa các file .svg, .node.json và .node.ts
+- File .svg sẽ là icon của node
+- File .node.ts: Đây là file TypeScript chứa code thực thi chính của node (logic, gọi API, xử lý dữ liệu, v.v.).
+- File .node.json -  Khai báo metadata UI, đây là file JSON chứa metadata mô tả node: tên, biểu tượng, phiên bản, các trường cần nhập, các lựa chọn,... (tương tự như phần description ở trên, nhưng ở dạng tách riêng và dễ build tự động)
+- File .node.json không bắt buộc phải có
