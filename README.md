@@ -1,46 +1,37 @@
-![Banner image](https://user-images.githubusercontent.com/10284570/173569848-c624317f-42b1-45a6-ab09-f0ea3c247648.png)
+*** Cài đặt n8n:
+- clone repo từ git về
+git clone https://github.com/MOBIWORK/N8N_ERPNext.git
+cd N8N_ERPNext
 
-# n8n-nodes-starter
+1. Cài đặt Node.js (phiên bản khuyến nghị: LTS 20)
+- curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+- sudo apt install -y nodejs
+Kiểm tra:
+- node -v
+- npm -v
 
-This repo contains example nodes to help you get started building your own custom integrations for [n8n](n8n.io). It includes the node linter and other dependencies.
+2. Cài pnpm
+- sudo npm install -g pnpm
+check: pnpm -v
 
-To make your custom node available to the community, you must create it as an npm package, and [submit it to the npm registry](https://docs.npmjs.com/packages-and-modules/contributing-packages-to-the-registry).
+3. cài đặt dependencies của dự án
+- pnpm setup (Lệnh pnpm setup dùng để thiết lập môi trường pnpm đúng cách)
+- source ~/.bashrc
+- pnpm install (pnpm i)
 
-## Prerequisites
+4. Cài đặt n8n bằng npm
+- npm install n8n -g (sudo pnpm install n8n -g)
 
-You need the following installed on your development machine:
+5. public custom node n8n:
+- pnpm run build (sau khi chạy sẽ tạo folder dist chứa custom node và creadential)
+- pnpm link
 
-* [git](https://git-scm.com/downloads)
-* Node.js and pnpm. Minimum version Node 18. You can find instructions on how to install both using nvm (Node Version Manager) for Linux, Mac, and WSL [here](https://github.com/nvm-sh/nvm). For Windows users, refer to Microsoft's guide to [Install NodeJS on Windows](https://docs.microsoft.com/en-us/windows/dev-environment/javascript/nodejs-on-windows).
-* Install n8n with:
-  ```
-  pnpm install n8n -g
-  ```
-* Recommended: follow n8n's guide to [set up your development environment](https://docs.n8n.io/integrations/creating-nodes/build/node-development-environment/).
+6. Cài đặt nút vào phiên bản n8n cục bộ
+- mkdir -p ~/.n8n/custom/
+- cd ~/.n8n/custom/
+- pnpm link <node-package-name> (trong file package.json của source code)
+- Tạo file môi trường .env nếu cần
+- n8n start (Có thể chạy n8n start ở cả N8N_ERPNext hoặc ~/.n8n/custom/)
 
-## Using this starter
-
-These are the basic steps for working with the starter. For detailed guidance on creating and publishing nodes, refer to the [documentation](https://docs.n8n.io/integrations/creating-nodes/).
-
-1. [Generate a new repository](https://github.com/n8n-io/n8n-nodes-starter/generate) from this template repository.
-2. Clone your new repo:
-   ```
-   git clone https://github.com/<your organization>/<your-repo-name>.git
-   ```
-3. Run `pnpm i` to install dependencies.
-4. Open the project in your editor.
-5. Browse the examples in `/nodes` and `/credentials`. Modify the examples, or replace them with your own nodes.
-6. Update the `package.json` to match your details.
-7. Run `pnpm lint` to check for errors or `pnpm lintfix` to automatically fix errors when possible.
-8. Test your node locally. Refer to [Run your node locally](https://docs.n8n.io/integrations/creating-nodes/test/run-node-locally/) for guidance.
-9. Replace this README with documentation for your node. Use the [README_TEMPLATE](README_TEMPLATE.md) to get started.
-10. Update the LICENSE file to use your details.
-11. [Publish](https://docs.npmjs.com/packages-and-modules/contributing-packages-to-the-registry) your package to npm.
-
-## More information
-
-Refer to our [documentation on creating nodes](https://docs.n8n.io/integrations/creating-nodes/) for detailed information on building your own nodes.
-
-## License
-
-[MIT](https://github.com/n8n-io/n8n-nodes-starter/blob/master/LICENSE.md)
+7. Sau khi cập nhật code mới:
+cd N8N_ERPNext -> pnpm run build để update -> n8n start
