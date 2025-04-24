@@ -34,4 +34,4 @@ check: pnpm -v
 - n8n start (Có thể chạy n8n start ở cả N8N_ERPNext hoặc ~/.n8n/custom/)
 
 7. Sau khi cập nhật code mới:
-cd N8N_ERPNext -> pnpm run build để update -> n8n start
+- cd N8N_ERPNext -> pnpm run build để update -> n8n start
