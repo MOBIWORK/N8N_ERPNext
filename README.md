@@ -29,7 +29,7 @@ check: pnpm -v
 6. Cài đặt nút vào phiên bản n8n cục bộ
 - mkdir -p ~/.n8n/custom/
 - cd ~/.n8n/custom/
-- pnpm link <node-package-name> (trong file package.json của source code)
+- pnpm link node-package-name (trong file package.json của source code)
 - Tạo file môi trường .env nếu cần
 - n8n start (Có thể chạy n8n start ở cả N8N_ERPNext hoặc ~/.n8n/custom/)
 
