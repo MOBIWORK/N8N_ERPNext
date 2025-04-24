@@ -1,0 +1,18 @@
+{
+	"node": "n8n-nodes-base.DMS",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["ERP", "DMS"],
+	"resources": {
+		"credentialDocumentation": [
+			{
+				"url": ""
+			}
+		],
+		"primaryDocumentation": [
+			{
+				"url": ""
+			}
+		]
+	}
+}
