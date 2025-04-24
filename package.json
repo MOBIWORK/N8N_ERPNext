@@ -36,10 +36,12 @@
   "n8n": {
     "n8nNodesApiVersion": 1,
     "credentials": [
-      "dist/credentials/EFrappeCustomApi.credentials.js"
+      "dist/credentials/FrappeCustomApi.credentials.js",
+      "dist/credentials/MBWDMSCustomOAuth2Api.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/ERPNext/FrappeCustom.node.js"
+      "dist/nodes/ERPNext/FrappeCustom.node.js",
+      "dist/nodes/DMS/MBWDMSCustom.node.js"
     ]
   },
   "devDependencies": {
